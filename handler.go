@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -23,16 +24,40 @@ func (h *handler) FindByTitle(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, err.Error())
 	}
 
+	// Select database and collection
 	col := collection(h.client, "movies")
 
-	var result bson.M
-	if err := col.FindOne(c.Request().Context(), bson.D{{"title", m.Title}}).Decode(&result); err != nil {
+	// Define filter (empty filter retrieves all documents)
+	filter := bson.M{"title": beginsWith(m.Title)}
+
+	// Execute Find query
+	cursor, err := col.Find(c.Request().Context(), filter)
+	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			log.Printf("No document was found with the title %q", m.Title)
-			return c.NoContent(http.StatusNotFound)
+			return echo.NewHTTPError(http.StatusNotFound, err)
 		}
 		log.Panic(err)
 	}
 
-	return c.JSON(http.StatusOK, result)
+	var results []bson.M
+
+	// Iterate through the cursor
+	for cursor.Next(c.Request().Context()) {
+		var result bson.M
+		if err = cursor.Decode(&result); err != nil {
+			log.Panic(err)
+		}
+		results = append(results, result)
+	}
+
+	// Check for errors during iteration
+	if err = cursor.Err(); err != nil {
+		log.Panic(err)
+	}
+
+	if len(results) == 0 {
+		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("No results found for title: %s", m.Title))
+	}
+
+	return c.JSON(http.StatusOK, results)
 }

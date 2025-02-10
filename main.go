@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
@@ -34,7 +33,7 @@ func main() {
 
 	e := echo.New()
 
-	e.Validator = &CustomValidator{Validator: validator.New()}
+	e.Validator = NewValidator()
 
 	e.GET(
 		"/", func(c echo.Context) error {
