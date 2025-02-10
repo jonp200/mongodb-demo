@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 
 	"github.com/labstack/gommon/log"
@@ -35,4 +36,13 @@ func collection(client *mongo.Client, col string) *mongo.Collection {
 
 func beginsWith(a string) bson.M {
 	return bson.M{"$regex": "^" + a, "$options": "i"}
+}
+
+func index(client *mongo.Client) {
+	movies := collection(client, "movies")
+
+	titleIX := mongo.IndexModel{Keys: bson.D{{"title", 1}}}
+	if _, err := movies.Indexes().CreateOne(context.Background(), titleIX); err != nil {
+		log.Fatal(err)
+	}
 }

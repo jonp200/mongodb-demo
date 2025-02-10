@@ -31,6 +31,9 @@ func main() {
 		log.Print("MongoDB disconnected.")
 	}()
 
+	// Create indexes
+	index(client)
+
 	e := echo.New()
 
 	e.Validator = NewValidator()

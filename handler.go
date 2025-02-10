@@ -39,15 +39,9 @@ func (h *handler) FindByTitle(c echo.Context) error {
 		log.Panic(err)
 	}
 
-	var results []bson.M
-
-	// Iterate through the cursor
-	for cursor.Next(c.Request().Context()) {
-		var result bson.M
-		if err = cursor.Decode(&result); err != nil {
-			log.Panic(err)
-		}
-		results = append(results, result)
+	var results []bson.D
+	if err = cursor.All(c.Request().Context(), &results); err != nil {
+		log.Panic(err)
 	}
 
 	// Check for errors during iteration
