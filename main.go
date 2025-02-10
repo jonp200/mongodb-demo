@@ -2,58 +2,63 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"log"
+	"net/http"
 	"os"
+	"os/signal"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/joho/godotenv"
-	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/gommon/log"
 )
 
 func main() {
+	log.SetHeader("${time_rfc3339} ${level} ${short_file}:${line}")
+
 	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
+		log.Print("No .env file found")
 	}
 
-	uri := os.Getenv("MONGODB_URI")
-	docs := "www.mongodb.com/docs/drivers/go/current/"
-	if uri == "" {
-		log.Fatal(
-			"Set your 'MONGODB_URI' environment variable. " +
-				"See: " + docs +
-				"usage-examples/#environment-variable",
-		)
-	}
-	client, err := mongo.Connect(options.Client().ApplyURI(uri))
-	if err != nil {
-		panic(err)
-	}
+	// Initialise MongoDB client once
+	client := connect()
 
 	defer func() {
-		if err = client.Disconnect(context.TODO()); err != nil {
-			panic(err)
+		log.Print("Disconnecting from MongoDB...")
+		if err := client.Disconnect(context.Background()); err != nil {
+			log.Fatal(err)
+		}
+
+		log.Print("MongoDB disconnected.")
+	}()
+
+	e := echo.New()
+
+	e.Validator = &CustomValidator{Validator: validator.New()}
+
+	e.GET(
+		"/", func(c echo.Context) error {
+			return c.String(http.StatusOK, "MongoDB demo")
+		},
+	)
+
+	h := handler{client}
+
+	e.GET("/movies", h.FindByTitle)
+
+	// Handle shutdown gracefully
+	go func() {
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, os.Interrupt)
+		<-sigChan
+
+		log.Print("Shutting down gracefully...")
+		if err := e.Shutdown(context.Background()); err != nil {
+			log.Fatal(err)
 		}
 	}()
 
-	coll := client.Database("sample_mflix").Collection("movies")
-	title := "Back to the Future"
-
-	var result bson.M
-	if err = coll.FindOne(context.TODO(), bson.D{{"title", title}}).Decode(&result); err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			fmt.Printf("No document was found with the title %s\n", title)
-			return
-		}
-		panic(err)
+	if err := e.Start(":8080"); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatal(err)
 	}
-
-	var data []byte
-	if data, err = json.MarshalIndent(result, "", "    "); err != nil {
-		panic(err)
-	}
-	fmt.Printf("%s\n", data)
 }
