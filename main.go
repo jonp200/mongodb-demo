@@ -9,6 +9,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/jonp200/mongodb-demo/datastore"
+	"github.com/jonp200/mongodb-demo/datastore/migrations"
 	"github.com/jonp200/mongodb-demo/handler"
 	"github.com/jonp200/mongodb-demo/model"
 	"github.com/labstack/echo/v4"
@@ -30,12 +31,11 @@ func main() {
 		if err := client.Disconnect(context.Background()); err != nil {
 			log.Fatal(err)
 		}
-
-		log.Print("MongoDB disconnected.")
 	}()
 
-	// Create indexes
-	datastore.Index(client)
+	if err := migrations.Apply(context.Background(), client.Database(datastore.DbHobbyShop)); err != nil {
+		log.Fatal(err)
+	}
 
 	e := echo.New()
 
@@ -47,9 +47,9 @@ func main() {
 		},
 	)
 
-	h := handler.Handler{Client: client}
+	h := &handler.Handler{Client: client}
 
-	e.GET("/movies", h.FindByTitle)
+	e.GET("/inventory", h.FindInventory)
 
 	// Handle shutdown gracefully
 	go func() {

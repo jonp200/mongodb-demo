@@ -26,8 +26,4 @@ func Connect() *mongo.Client {
 	return client
 }
 
-const db = "sample_mflix"
-
-func Collection(client *mongo.Client, col string) *mongo.Collection {
-	return client.Database(db).Collection(col)
-}
+const DbHobbyShop = "sample_hobby_shop"
