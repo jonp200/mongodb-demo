@@ -8,6 +8,9 @@ import (
 	"os/signal"
 
 	"github.com/joho/godotenv"
+	"github.com/jonp200/mongodb-demo/datastore"
+	"github.com/jonp200/mongodb-demo/handler"
+	"github.com/jonp200/mongodb-demo/model"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
 )
@@ -20,7 +23,7 @@ func main() {
 	}
 
 	// Initialise MongoDB client once
-	client := connect()
+	client := datastore.Connect()
 
 	defer func() {
 		log.Print("Disconnecting from MongoDB...")
@@ -32,11 +35,11 @@ func main() {
 	}()
 
 	// Create indexes
-	index(client)
+	datastore.Index(client)
 
 	e := echo.New()
 
-	e.Validator = NewValidator()
+	e.Validator = model.Validator()
 
 	e.GET(
 		"/", func(c echo.Context) error {
@@ -44,7 +47,7 @@ func main() {
 		},
 	)
 
-	h := handler{client}
+	h := handler.Handler{Client: client}
 
 	e.GET("/movies", h.FindByTitle)
 

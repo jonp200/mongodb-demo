@@ -1,4 +1,4 @@
-package main
+package model
 
 type Movie struct {
 	Title string `json:"title" query:"title" validate:"not_blank"`

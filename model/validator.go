@@ -1,4 +1,4 @@
-package main
+package model
 
 import (
 	"github.com/go-playground/validator/v10"
@@ -6,7 +6,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func NewValidator() echo.Validator {
+func Validator() echo.Validator {
 	v := validator.New()
 	_ = v.RegisterValidation("not_blank", validators.NotBlank)
 
