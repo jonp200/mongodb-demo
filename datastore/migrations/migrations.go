@@ -12,6 +12,29 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
+func Apply(ctx context.Context, db *mongo.Database) error {
+	mc := db.Collection("migrations")
+	for _, m := range migrations {
+		var existing bson.M
+		err := mc.FindOne(ctx, bson.M{"_id": m.id}).Decode(&existing)
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			log.Printf("Applying migration: %s", m.id)
+
+			if err = m.up(ctx, db); err != nil {
+				return fmt.Errorf("migration %s failed: %w", m.id, err)
+			}
+
+			if _, err = mc.InsertOne(
+				ctx, bson.M{"_id": m.id, "applied_at": time.Now().UTC().Format(time.RFC3339)},
+			); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 type migration struct {
 	id   string
 	up   func(ctx context.Context, db *mongo.Database) error
@@ -65,27 +88,4 @@ var migrations = []migration{
 			return nil
 		},
 	},
-}
-
-func Apply(ctx context.Context, db *mongo.Database) error {
-	mc := db.Collection("migrations")
-	for _, m := range migrations {
-		var existing bson.M
-		err := mc.FindOne(ctx, bson.M{"_id": m.id}).Decode(&existing)
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			log.Printf("Applying migration: %s", m.id)
-
-			if err = m.up(ctx, db); err != nil {
-				return fmt.Errorf("migration %s failed: %w", m.id, err)
-			}
-
-			if _, err = mc.InsertOne(
-				ctx, bson.M{"_id": m.id, "applied_at": time.Now().UTC().Format(time.RFC3339)},
-			); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
 }

@@ -16,7 +16,7 @@ import (
 
 func (h *Handler) FindInventory(c echo.Context) error {
 	var m struct {
-		Name string `json:"name" form:"name" query:"name" validate:"not_blank"`
+		Name string `query:"name" form:"name" validate:"not_blank"`
 	}
 	if err := c.Bind(&m); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())

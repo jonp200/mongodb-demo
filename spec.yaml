@@ -1,0 +1,70 @@
+openapi: 3.0.0
+info:
+  title: Hobby shop
+  description: Hobby shop
+  version: 1.0.0
+servers:
+  - url: 'http://localhost:8080'
+paths:
+  /inventory:
+    get:
+      description: Gets the available inventory
+      parameters:
+        - in: query
+          name: name
+          schema:
+            type: string
+          required: true
+      responses:
+        200:
+          description: Inventory
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  short_name:
+                    type: string
+                  full_name:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                      - In stock
+                      - Unavailable
+                      - Discontinued
+                  stock:
+                    type: integer
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+        400:
+          $ref: '#/components/responses/InvalidRequest'
+        422:
+          $ref: '#/components/responses/ValidationResponse'
+components:
+  responses:
+    InvalidRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+    ValidationResponse:
+      description: Validation response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+  schemas:
+    ErrorMessage:
+      type: object
+      properties:
+        message:
+          type: string
