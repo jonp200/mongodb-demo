@@ -2,7 +2,6 @@ package handler
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/jonp200/mongodb-demo/datastore"
@@ -16,7 +15,8 @@ import (
 
 func (h *Handler) FindInventory(c echo.Context) error {
 	var m struct {
-		Name string `query:"name" form:"name" validate:"not_blank"`
+		ID   string `query:"id" form:"id" validate:"required_without=Name|uuid4"`
+		Name string `query:"name" form:"name" validate:"required_without=ID"`
 	}
 	if err := c.Bind(&m); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -28,8 +28,13 @@ func (h *Handler) FindInventory(c echo.Context) error {
 	// Select database and collection
 	col := h.Client.Database(datastore.DbHobbyShop).Collection("inventory")
 
-	// Define filter (empty filter retrieves all documents)
-	f := bson.M{"short_name": filter.BeginsWith(m.Name)}
+	// Initialise with ID filter
+	f := bson.M{"_id": bson.M{"$eq": m.ID}}
+
+	// If ID filter is not provided, use the other filters combined
+	if m.ID == "" {
+		f = bson.M{"short_name": filter.BeginsWith(m.Name)}
+	}
 
 	// Execute Find query
 	cursor, err := col.Find(c.Request().Context(), f)
@@ -51,7 +56,7 @@ func (h *Handler) FindInventory(c echo.Context) error {
 	}
 
 	if len(results) == 0 {
-		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("No results found for: %s", m.Name))
+		return echo.NewHTTPError(http.StatusNotFound, "Inventory item not found")
 	}
 
 	return c.JSON(

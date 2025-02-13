@@ -8,42 +8,49 @@ servers:
 paths:
   /inventory:
     get:
-      description: Gets the available inventory
+      description: Gets the inventory items
+      tags:
+        - Inventory
       parameters:
         - in: query
-          name: name
+          name: id
+          description: ID of the inventory item. Required when name is not provided
           schema:
             type: string
-          required: true
+            format: uuid
+        - in: query
+          name: name
+          description: Name of the inventory item. Required when ID is not provided
+          schema:
+            type: string
       responses:
         200:
-          description: Inventory
+          description: Inventory data
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                  short_name:
-                    type: string
-                  full_name:
-                    type: string
-                  status:
-                    type: string
-                    enum:
-                      - In stock
-                      - Unavailable
-                      - Discontinued
-                  stock:
-                    type: integer
-                  created_at:
-                    type: string
-                    format: date-time
-                  updated_at:
-                    type: string
-                    format: date-time
+                $ref: '#/components/schemas/InventoryGetOk'
+        400:
+          $ref: '#/components/responses/InvalidRequest'
+        422:
+          $ref: '#/components/responses/ValidationResponse'
+    post:
+      description: Adds an item in the inventory
+      tags:
+        - Inventory
+      requestBody:
+        description: Inventory data
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryPostRequest'
+      responses:
+        201:
+          description: Record ID of the created inventory item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryPostCreated'
         400:
           $ref: '#/components/responses/InvalidRequest'
         422:
@@ -68,3 +75,52 @@ components:
       properties:
         message:
           type: string
+    InventoryGetOk:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        short_name:
+          type: string
+        full_name:
+          type: string
+        status:
+          type: string
+          enum:
+            - In stock
+            - Unavailable
+            - Discontinued
+        stock:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    InventoryPostRequest:
+      type: object
+      properties:
+        short_name:
+          type: string
+        full_name:
+          type: string
+        status:
+          type: string
+          enum:
+            - In stock
+            - Unavailable
+            - Discontinued
+        stock:
+          type: integer
+      required:
+        - short_name
+        - full_name
+        - status
+    InventoryPostCreated:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
