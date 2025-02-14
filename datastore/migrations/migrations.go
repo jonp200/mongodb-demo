@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/labstack/gommon/log"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -52,7 +51,6 @@ var migrations = []migration{
 
 			_, err = db.Collection("inventory").InsertOne(
 				ctx, bson.D{
-					{"_id", uuid.New().String()},
 					{"short_name", "Rare item"},
 					{"full_name", "Rare item - Limited collection"},
 					{"status", "In stock"},

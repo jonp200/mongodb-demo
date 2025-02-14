@@ -17,7 +17,6 @@ paths:
           description: ID of the inventory item. Required when name is not provided
           schema:
             type: string
-            format: uuid
         - in: query
           name: name
           description: Name of the inventory item. Required when ID is not provided
@@ -80,7 +79,6 @@ components:
       properties:
         id:
           type: string
-          format: uuid
         short_name:
           type: string
         full_name:
@@ -123,4 +121,3 @@ components:
       properties:
         id:
           type: string
-          format: uuid

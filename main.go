@@ -11,6 +11,7 @@ import (
 	"github.com/jonp200/mongodb-demo/datastore"
 	"github.com/jonp200/mongodb-demo/datastore/migrations"
 	"github.com/jonp200/mongodb-demo/handler"
+	"github.com/jonp200/mongodb-demo/helpers"
 	"github.com/jonp200/mongodb-demo/model"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
@@ -47,7 +48,10 @@ func main() {
 		},
 	)
 
-	h := &handler.Handler{Client: client}
+	h := &handler.Handler{
+		Client: client,
+		Time:   helpers.UTC{},
+	}
 
 	e.GET("/inventory", h.FindInventory)
 

@@ -5,18 +5,18 @@ import (
 	"net/http"
 
 	"github.com/jonp200/mongodb-demo/datastore"
-	"github.com/jonp200/mongodb-demo/datastore/filter"
 	"github.com/jonp200/mongodb-demo/model"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 func (h *Handler) FindInventory(c echo.Context) error {
 	var m struct {
-		ID   string `query:"id" form:"id" validate:"required_without=Name|uuid4"`
-		Name string `query:"name" form:"name" validate:"required_without=ID"`
+		ID   bson.ObjectID `query:"id" form:"id" validate:"required_without=Name"`
+		Name string        `query:"name" form:"name" validate:"required_without=ID"`
 	}
 	if err := c.Bind(&m); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -26,18 +26,21 @@ func (h *Handler) FindInventory(c echo.Context) error {
 	}
 
 	// Select database and collection
-	col := h.Client.Database(datastore.DbHobbyShop).Collection("inventory")
+	coll := h.Client.Database(datastore.DbHobbyShop).Collection("inventory")
 
 	// Initialise with ID filter
-	f := bson.M{"_id": bson.M{"$eq": m.ID}}
+	filter := bson.M{"_id": bson.M{"$eq": m.ID}}
 
 	// If ID filter is not provided, use the other filters combined
-	if m.ID == "" {
-		f = bson.M{"short_name": filter.BeginsWith(m.Name)}
+	if m.ID.IsZero() {
+		filter = bson.M{"short_name": bson.M{"$regex": "^" + m.Name, "$options": "i"}}
 	}
 
+	// Sort the results by full name
+	opts := options.Find().SetSort(bson.M{"full_name": 1})
+
 	// Execute Find query
-	cursor, err := col.Find(c.Request().Context(), f)
+	cursor, err := coll.Find(c.Request().Context(), filter, opts)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return echo.NewHTTPError(http.StatusNotFound, err)
