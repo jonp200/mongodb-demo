@@ -54,6 +54,7 @@ func main() {
 	}
 
 	e.GET("/inventory", h.FindInventory)
+	e.GET("/inventory/:id", h.FindInventoryByID)
 	e.POST("/inventory", h.AddInventory)
 
 	// Handle shutdown gracefully

@@ -13,22 +13,23 @@ paths:
         - Inventory
       parameters:
         - in: query
-          name: id
-          description: ID of the inventory item. Required when name is not provided
-          schema:
-            type: string
-        - in: query
           name: name
-          description: Name of the inventory item. Required when ID is not provided
+          description: Name of the inventory item
           schema:
             type: string
+          required: true
       responses:
         200:
-          description: Inventory data
+          description: List of inventory data
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/InventoryGetOk'
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/InventoryGetOk'
         400:
           $ref: '#/components/responses/InvalidRequest'
         422:
@@ -50,6 +51,53 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/InventoryPostCreated'
+        400:
+          $ref: '#/components/responses/InvalidRequest'
+        422:
+          $ref: '#/components/responses/ValidationResponse'
+  /inventory/{id}:
+    get:
+      description: Gets the inventory item with the specified ID
+      tags:
+        - Inventory
+      parameters:
+        - in: path
+          name: id
+          description: ID of the inventory item
+          schema:
+            type: string
+          required: true
+      responses:
+        200:
+          description: Inventory data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryGetOk'
+        400:
+          $ref: '#/components/responses/InvalidRequest'
+        422:
+          $ref: '#/components/responses/ValidationResponse'
+    put:
+      description: Update an inventory item
+      tags:
+        - Inventory
+      parameters:
+        - in: path
+          name: id
+          description: ID of the inventory item
+          schema:
+            type: string
+          required: true
+      requestBody:
+        description: Inventory data
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryPostRequest'
+      responses:
+        204:
+          description: Update succeeded
         400:
           $ref: '#/components/responses/InvalidRequest'
         422:

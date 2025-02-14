@@ -15,8 +15,7 @@ import (
 
 func (h *Handler) FindInventory(c echo.Context) error {
 	var m struct {
-		ID   bson.ObjectID `query:"id" form:"id" validate:"required_without=Name"`
-		Name string        `query:"name" form:"name" validate:"required_without=ID"`
+		Name string `query:"name" validate:"not_blank"`
 	}
 	if err := c.Bind(&m); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -25,21 +24,12 @@ func (h *Handler) FindInventory(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, err.Error())
 	}
 
-	// Select database and collection
 	coll := h.Client.Database(datastore.DbHobbyShop).Collection("inventory")
 
-	// Initialise with ID filter
-	filter := bson.M{"_id": bson.M{"$eq": m.ID}}
+	filter := bson.M{"short_name": bson.M{"$regex": m.Name, "$options": "i"}}
 
-	// If ID filter is not provided, use the other filters combined
-	if m.ID.IsZero() {
-		filter = bson.M{"short_name": bson.M{"$regex": m.Name, "$options": "i"}}
-	}
-
-	// Sort the results by full name
 	opts := options.Find().SetSort(bson.M{"full_name": 1})
 
-	// Execute Find query
 	cursor, err := coll.Find(c.Request().Context(), filter, opts)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
@@ -53,7 +43,6 @@ func (h *Handler) FindInventory(c echo.Context) error {
 		log.Panic(err)
 	}
 
-	// Check for errors during iteration
 	if err = cursor.Err(); err != nil {
 		log.Panic(err)
 	}
@@ -69,12 +58,9 @@ func (h *Handler) FindInventory(c echo.Context) error {
 	)
 }
 
-func (h *Handler) AddInventory(c echo.Context) error {
+func (h *Handler) FindInventoryByID(c echo.Context) error {
 	var m struct {
-		ShortName string `bson:"short_name" json:"short_name" validate:"not_blank"`
-		FullName  string `bson:"full_name" json:"full_name" validate:"not_blank"`
-		Status    string `bson:"status" json:"status" validate:"not_blank"`
-		Stock     int    `bson:"stock" json:"stock" validate:"gte=0"`
+		ID bson.ObjectID `param:"id" validate:"not_blank"`
 	}
 	if err := c.Bind(&m); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -83,7 +69,35 @@ func (h *Handler) AddInventory(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnprocessableEntity, err.Error())
 	}
 
-	// Select database and collection
+	coll := h.Client.Database(datastore.DbHobbyShop).Collection("inventory")
+
+	filter := bson.M{"_id": bson.M{"$eq": m.ID}}
+
+	var result model.Inventory
+	if err := coll.FindOne(c.Request().Context(), filter).Decode(&result); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return echo.NewHTTPError(http.StatusNotFound, err)
+		}
+		log.Panic(err)
+	}
+
+	return c.JSON(http.StatusOK, result)
+}
+
+func (h *Handler) AddInventory(c echo.Context) error {
+	var m struct {
+		ShortName string `json:"short_name" validate:"not_blank"`
+		FullName  string `json:"full_name" validate:"not_blank"`
+		Status    string `json:"status" validate:"not_blank"`
+		Stock     int    `json:"stock" validate:"gte=0"`
+	}
+	if err := c.Bind(&m); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	if err := c.Validate(m); err != nil {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, err.Error())
+	}
+
 	coll := h.Client.Database(datastore.DbHobbyShop).Collection("inventory")
 
 	doc := model.Inventory{
@@ -95,7 +109,6 @@ func (h *Handler) AddInventory(c echo.Context) error {
 		CreatedAt: h.Time.Now(),
 	}
 
-	// Execute Insert command
 	result, err := coll.InsertOne(c.Request().Context(), doc)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
