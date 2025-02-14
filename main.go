@@ -54,6 +54,7 @@ func main() {
 	}
 
 	e.GET("/inventory", h.FindInventory)
+	e.POST("/inventory", h.AddInventory)
 
 	// Handle shutdown gracefully
 	go func() {

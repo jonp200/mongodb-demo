@@ -33,7 +33,7 @@ func (h *Handler) FindInventory(c echo.Context) error {
 
 	// If ID filter is not provided, use the other filters combined
 	if m.ID.IsZero() {
-		filter = bson.M{"short_name": bson.M{"$regex": "^" + m.Name, "$options": "i"}}
+		filter = bson.M{"short_name": bson.M{"$regex": m.Name, "$options": "i"}}
 	}
 
 	// Sort the results by full name
@@ -65,6 +65,45 @@ func (h *Handler) FindInventory(c echo.Context) error {
 	return c.JSON(
 		http.StatusOK, map[string]any{
 			"data": results,
+		},
+	)
+}
+
+func (h *Handler) AddInventory(c echo.Context) error {
+	var m struct {
+		ShortName string `bson:"short_name" json:"short_name" validate:"not_blank"`
+		FullName  string `bson:"full_name" json:"full_name" validate:"not_blank"`
+		Status    string `bson:"status" json:"status" validate:"not_blank"`
+		Stock     int    `bson:"stock" json:"stock" validate:"gte=0"`
+	}
+	if err := c.Bind(&m); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	if err := c.Validate(m); err != nil {
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, err.Error())
+	}
+
+	// Select database and collection
+	coll := h.Client.Database(datastore.DbHobbyShop).Collection("inventory")
+
+	doc := model.Inventory{
+		ID:        bson.NewObjectID(),
+		ShortName: m.ShortName,
+		FullName:  m.FullName,
+		Status:    m.Status,
+		Stock:     m.Stock,
+		CreatedAt: h.Time.Now(),
+	}
+
+	// Execute Insert command
+	result, err := coll.InsertOne(c.Request().Context(), doc)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(
+		http.StatusCreated, map[string]any{
+			"id": result.InsertedID,
 		},
 	)
 }

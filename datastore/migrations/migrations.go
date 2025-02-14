@@ -9,6 +9,7 @@ import (
 	"github.com/labstack/gommon/log"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 func Apply(ctx context.Context, db *mongo.Database) error {
@@ -55,8 +56,7 @@ var migrations = []migration{
 					{"full_name", "Rare item - Limited collection"},
 					{"status", "In stock"},
 					{"stock", 1},
-					{"created_at", time.Now().UTC().Format(time.RFC3339)},
-					{"updated_at", nil},
+					{"created_at", time.Now().UTC()},
 				},
 			)
 			if err != nil {
@@ -65,12 +65,18 @@ var migrations = []migration{
 
 			invCol := db.Collection("inventory")
 
-			invShortNameIX := mongo.IndexModel{Keys: bson.D{{"short_name", 1}}}
+			invShortNameIX := mongo.IndexModel{
+				Keys:    bson.D{{"short_name", 1}},
+				Options: options.Index().SetUnique(true),
+			}
 			if _, err = invCol.Indexes().CreateOne(context.Background(), invShortNameIX); err != nil {
 				return err
 			}
 
-			invFullNameIX := mongo.IndexModel{Keys: bson.D{{"full_name", 1}}}
+			invFullNameIX := mongo.IndexModel{
+				Keys:    bson.D{{"full_name", 1}},
+				Options: options.Index().SetUnique(true),
+			}
 			if _, err = invCol.Indexes().CreateOne(context.Background(), invFullNameIX); err != nil {
 				return err
 			}
